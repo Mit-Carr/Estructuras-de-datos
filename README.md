@@ -1,4 +1,5 @@
 Conclusiones del Proyecto (Mitchel Carrillo Uicab)
+
 La ejecución de este código me permitió pasar de la teoría a la práctica, usando algunas librerias de ciencias de datos de por medio para la materia.
 
 De NumPy a Pandas
