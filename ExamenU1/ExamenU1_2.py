@@ -1,8 +1,4 @@
 def analizar_temperaturas_semanales():
-    """
-    Almacena las temperaturas diarias de una semana, calcula el promedio,
-    la temperatura más alta y más baja, y cuántos días superaron el promedio.
-    """
    
     temperaturas = []
     dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
