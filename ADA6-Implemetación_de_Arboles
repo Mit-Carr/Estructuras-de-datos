@@ -1,0 +1,534 @@
+import sys
+import tkinter as tk
+from tkinter import ttk, messagebox
+from collections import deque
+
+# Aumentamos el límite de recursión para árboles muy grandes
+sys.setrecursionlimit(2000)
+
+class Nodo:
+    """Clase para representar un nodo del árbol."""
+    def __init__(self, dato):
+        self.dato = dato
+        self.izquierdo = None
+        self.derecho = None
+
+class ArbolBinarioBusqueda:
+    """
+    Clase del Árbol Binario de Búsqueda.
+    Maneja la lógica y le pide al 'Visualizador' que se redibuje
+    y muestre mensajes en el log.
+    """
+
+    def __init__(self, visualizador):
+        self.raiz = None
+        self.visualizador = visualizador # Referencia a la App
+
+    def __del__(self):
+        self.eliminar_arbol_completo(silencioso=True)
+
+    def esVacio(self):
+        return self.raiz is None
+
+    # --- [1] Insertar ---
+    def insertar(self, dato):
+        if dato == "":
+            self.visualizador.mostrar_resultado("Insertar [1]", "Error: Ingrese un valor.", "error")
+            return
+        
+        try:
+            dato_num = int(dato)
+            if self._buscar_recursivo(self.raiz, dato_num):
+                self.visualizador.mostrar_resultado("Insertar [1]", f"El elemento {dato_num} ya existe.", "info")
+            else:
+                self.raiz = self._insertar_recursivo(self.raiz, dato_num)
+                self.visualizador.mostrar_resultado("Insertar [1]", f"Elemento {dato_num} insertado.", "success")
+                self.visualizador.actualizar_canvas()
+        except ValueError:
+            self.visualizador.mostrar_resultado("Insertar [1]", "Error: Ingrese solo valores numéricos.", "error")
+
+    def _insertar_recursivo(self, nodo, dato):
+        if nodo is None: return Nodo(dato)
+        if dato < nodo.dato:
+            nodo.izquierdo = self._insertar_recursivo(nodo.izquierdo, dato)
+        elif dato > nodo.dato:
+            nodo.derecho = self._insertar_recursivo(nodo.derecho, dato)
+        return nodo
+
+    # --- [4] Buscar Elemento ---
+    def buscar(self, dato):
+        if dato == "":
+            self.visualizador.mostrar_resultado("Buscar [4]", "Error: Ingrese un valor a buscar.", "error")
+            return
+        try:
+            dato_num = int(dato)
+            if self._buscar_recursivo(self.raiz, dato_num) is not None:
+                self.visualizador.mostrar_resultado("Buscar [4]", f"Resultado: El elemento {dato_num} SÍ se encuentra.", "result")
+                return True
+            else:
+                self.visualizador.mostrar_resultado("Buscar [4]", f"Resultado: El elemento {dato_num} NO se encuentra.", "info")
+                return False
+        except ValueError:
+            self.visualizador.mostrar_resultado("Buscar [4]", "Error: Ingrese solo valores numéricos.", "error")
+            return False
+
+    def _buscar_recursivo(self, nodo, dato):
+        if nodo is None or nodo.dato == dato: return nodo
+        if dato < nodo.dato:
+            return self._buscar_recursivo(nodo.izquierdo, dato)
+        else:
+            return self._buscar_recursivo(nodo.derecho, dato)
+
+    # --- [5] Recorrido PreOrden ---
+    def get_preorden(self):
+        if self.esVacio():
+            self.visualizador.mostrar_resultado("PreOrden [5]", "Árbol vacío.", "info")
+            return
+        nodos = self._preorden_recursivo(self.raiz)
+        self.visualizador.mostrar_resultado("PreOrden [5]", " -> ".join(map(str, nodos)), "result")
+
+    def _preorden_recursivo(self, nodo):
+        if nodo is None: return []
+        return [nodo.dato] + self._preorden_recursivo(nodo.izquierdo) + self._preorden_recursivo(nodo.derecho)
+
+    # --- [6] Recorrido InOrden ---
+    def get_inorden(self):
+        if self.esVacio():
+            self.visualizador.mostrar_resultado("InOrden [6]", "Árbol vacío.", "info")
+            return
+        nodos = self._inorden_recursivo(self.raiz)
+        self.visualizador.mostrar_resultado("InOrden [6]", " -> ".join(map(str, nodos)), "result")
+
+    def _inorden_recursivo(self, nodo):
+        if nodo is None: return []
+        return self._inorden_recursivo(nodo.izquierdo) + [nodo.dato] + self._inorden_recursivo(nodo.derecho)
+
+    # --- [7] Recorrido PostOrden ---
+    def get_postorden(self):
+        if self.esVacio():
+            self.visualizador.mostrar_resultado("PostOrden [7]", "Árbol vacío.", "info")
+            return
+        nodos = self._postorden_recursivo(self.raiz)
+        self.visualizador.mostrar_resultado("PostOrden [7]", " -> ".join(map(str, nodos)), "result")
+
+    def _postorden_recursivo(self, nodo):
+        if nodo is None: return []
+        return self._postorden_recursivo(nodo.izquierdo) + self._postorden_recursivo(nodo.derecho) + [nodo.dato]
+
+    # --- [8] y [9] Eliminar Nodo ---
+    
+    def _encontrar_minimo(self, nodo):
+        while nodo and nodo.izquierdo is not None: nodo = nodo.izquierdo
+        return nodo
+
+    def _encontrar_maximo(self, nodo):
+        while nodo and nodo.derecho is not None: nodo = nodo.derecho
+        return nodo
+
+    def eliminar_nodo(self, dato, tipo='sucesor'):
+        titulo = f"Eliminar ({tipo.capitalize()}) [{8 if tipo=='predecesor' else 9}]"
+        if dato == "":
+            self.visualizador.mostrar_resultado(titulo, "Error: Ingrese un valor a eliminar.", "error")
+            return
+
+        try:
+            dato_num = int(dato)
+            if self._buscar_recursivo(self.raiz, dato_num) is None:
+                 self.visualizador.mostrar_resultado(titulo, f"Nodo {dato_num} no encontrado.", "info")
+                 return
+                 
+            self.raiz = self._eliminar_recursivo(self.raiz, dato_num, tipo)
+            self.visualizador.mostrar_resultado(titulo, f"Nodo {dato_num} eliminado.", "success")
+            self.visualizador.actualizar_canvas()
+        except ValueError:
+            self.visualizador.mostrar_resultado(titulo, "Error: Ingrese solo valores numéricos.", "error")
+
+    def _eliminar_recursivo(self, nodo, dato, tipo):
+        if nodo is None: return nodo
+        if dato < nodo.dato:
+            nodo.izquierdo = self._eliminar_recursivo(nodo.izquierdo, dato, tipo)
+        elif dato > nodo.dato:
+            nodo.derecho = self._eliminar_recursivo(nodo.derecho, dato, tipo)
+        else:
+            if nodo.izquierdo is None: return nodo.derecho
+            elif nodo.derecho is None: return nodo.izquierdo
+            else:
+                if tipo == 'sucesor':
+                    temp = self._encontrar_minimo(nodo.derecho)
+                    nodo.dato = temp.dato
+                    nodo.derecho = self._eliminar_recursivo(nodo.derecho, temp.dato, tipo)
+                elif tipo == 'predecesor':
+                    temp = self._encontrar_maximo(nodo.izquierdo)
+                    nodo.dato = temp.dato
+                    nodo.izquierdo = self._eliminar_recursivo(nodo.izquierdo, temp.dato, tipo)
+        return nodo
+
+    # --- [10] Recorrer por Niveles (Amplitud) ---
+    def get_por_niveles(self):
+        if self.esVacio():
+            self.visualizador.mostrar_resultado("Por Niveles [10]", "Árbol vacío.", "info")
+            return
+        resultado = []
+        cola = deque([self.raiz])
+        while cola:
+            nodo = cola.popleft()
+            resultado.append(str(nodo.dato))
+            if nodo.izquierdo: cola.append(nodo.izquierdo)
+            if nodo.derecho: cola.append(nodo.derecho)
+        self.visualizador.mostrar_resultado("Por Niveles [10]", " -> ".join(resultado), "result")
+
+    # --- [11] Altura del Árbol ---
+    def get_altura(self):
+        h = self._altura_recursiva(self.raiz)
+        msg = f"La altura del árbol es: {h} (Raíz tiene altura 0)"
+        self.visualizador.mostrar_resultado("Altura [11]", msg, "result")
+
+    def _altura_recursiva(self, nodo):
+        if nodo is None: return -1
+        return 1 + max(self._altura_recursiva(nodo.izquierdo), self._altura_recursiva(nodo.derecho))
+
+    # --- [12] Cantidad de Hojas ---
+    def get_cantidad_hojas(self):
+        c = self._cantidad_hojas_recursiva(self.raiz)
+        self.visualizador.mostrar_resultado("Cant. Hojas [12]", f"El árbol tiene {c} nodos hoja.", "result")
+
+    def _cantidad_hojas_recursiva(self, nodo):
+        if nodo is None: return 0
+        if nodo.izquierdo is None and nodo.derecho is None: return 1
+        return self._cantidad_hojas_recursiva(nodo.izquierdo) + self._cantidad_hojas_recursiva(nodo.derecho)
+
+    # --- [13] Cantidad de Nodos ---
+    def get_cantidad_nodos(self):
+        c = self._cantidad_nodos_recursiva(self.raiz)
+        self.visualizador.mostrar_resultado("Cant. Nodos [13]", f"El árbol tiene {c} nodos en total.", "result")
+
+    def _cantidad_nodos_recursiva(self, nodo):
+        if nodo is None: return 0
+        return 1 + self._cantidad_nodos_recursiva(nodo.izquierdo) + self._cantidad_nodos_recursiva(nodo.derecho)
+
+    # --- [15] Árbol Binario Completo ---
+    def get_es_completo(self):
+        if self.esVacio():
+            self.visualizador.mostrar_resultado("¿Es Completo? [15]", "El árbol SÍ es completo (está vacío).", "result")
+            return
+        cola = deque([self.raiz])
+        fin_de_nodos = False
+        es_completo = True
+        while cola:
+            nodo = cola.popleft()
+            if nodo is None: fin_de_nodos = True
+            else:
+                if fin_de_nodos:
+                    es_completo = False
+                    break
+                cola.append(nodo.izquierdo)
+                cola.append(nodo.derecho)
+        
+        msg = "SÍ" if es_completo else "NO"
+        self.visualizador.mostrar_resultado("¿Es Completo? [15]", f"El árbol {msg} es completo.", "result")
+
+    # --- [16] Árbol Binario Lleno ---
+    def get_es_lleno(self):
+        msg = "SÍ" if self._es_lleno_recursivo(self.raiz) else "NO"
+        self.visualizador.mostrar_resultado("¿Es Lleno? [16]", f"El árbol {msg} es lleno.", "result")
+
+    def _es_lleno_recursivo(self, nodo):
+        if nodo is None: return True
+        if nodo.izquierdo is None and nodo.derecho is None: return True
+        if nodo.izquierdo is not None and nodo.derecho is not None:
+            return self._es_lleno_recursivo(nodo.izquierdo) and self._es_lleno_recursivo(nodo.derecho)
+        return False
+
+    # --- [17] Eliminar el Árbol ---
+    def eliminar_arbol_completo(self, silencioso=False):
+        self.raiz = self._eliminar_arbol_recursivo(self.raiz)
+        if not silencioso:
+            self.visualizador.mostrar_resultado("Eliminar Árbol [17]", "Árbol eliminado por completo.", "success")
+            self.visualizador.actualizar_canvas()
+
+    def _eliminar_arbol_recursivo(self, nodo):
+        if nodo is not None:
+            nodo.izquierdo = self._eliminar_arbol_recursivo(nodo.izquierdo)
+            nodo.derecho = self._eliminar_arbol_recursivo(nodo.derecho)
+            del nodo
+            return None
+        return None
+
+# --- Clase Principal de la Aplicación Gráfica ---
+
+class AppBST:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Visualizador de Árbol Binario de Búsqueda (BST)")
+        self.root.geometry("1200x800")
+        
+        # --- Configuración de Estilos --- 
+        self.style = ttk.Style()
+        self.style.configure("TButton", padding=6, relief="flat", font=('Arial', 10))
+        self.style.configure("TLabel", padding=5, font=('Arial', 10))
+        self.style.configure("TEntry", padding=5, font=('Arial', 11))
+        self.style.configure("TFrame", background="#f0f0f0")
+        self.style.configure("TLabelFrame", padding=10, background="#f0f0f0")
+        self.style.configure("TLabelFrame.Label", font=('Arial', 12, 'bold'), background="#f0f0f0")
+
+        # --- Constantes de dibujo ---
+        self.nodo_radio = 18
+        self.espacio_v = 60
+        self.padding = 40
+
+        # --- 1. Panel Principal (divido en Izq y Der) ---
+        self.main_pane = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
+        self.main_pane.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # --- 2. Panel de Control (Izquierda) ---
+        self.control_frame = ttk.Frame(self.main_pane, width=320, style="TFrame")
+        self.control_frame.pack_propagate(False) # Evita que el panel cambie de tamaño
+        self.main_pane.add(self.control_frame, weight=0) # weight=0 = tamaño fijo
+
+        # --- 3. Panel Derecho (dividido en Arriba y Abajo) ---
+        self.right_pane = ttk.PanedWindow(self.main_pane, orient=tk.VERTICAL)
+        self.main_pane.add(self.right_pane, weight=1) # weight=1 = redimensionable
+
+        # --- 4. Panel de Canvas (Derecha-Arriba) ---
+        self.canvas_frame = ttk.Frame(self.right_pane, style="TFrame")
+        self.right_pane.add(self.canvas_frame, weight=3) # 3/4 del espacio derecho
+
+        # --- 5. Panel de Resultados (Derecha-Abajo) ---
+        self.results_frame = ttk.LabelFrame(self.right_pane, text="Resultados", height=200)
+        self.results_frame.pack_propagate(False)
+        self.right_pane.add(self.results_frame, weight=1) # 1/4 del espacio derecho
+
+        # --- Configuración del Canvas (con scroll) ---
+        self.canvas = tk.Canvas(self.canvas_frame, bg="white", scrollregion=(0, 0, 800, 600))
+        hbar = ttk.Scrollbar(self.canvas_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        vbar = ttk.Scrollbar(self.canvas_frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
+        hbar.pack(side=tk.BOTTOM, fill=tk.X)
+        vbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # --- Configuración del Cuadro de Resultados (Log) ---
+        self.results_text = tk.Text(self.results_frame, height=10, wrap=tk.WORD, 
+                                    state=tk.DISABLED, font=('Arial', 10), 
+                                    bg="#fdfdfd")
+        results_scroll = ttk.Scrollbar(self.results_frame, orient=tk.VERTICAL, 
+                                       command=self.results_text.yview)
+        self.results_text.config(yscrollcommand=results_scroll.set)
+        results_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # --- Definir Colores para el Log ---
+        self.results_text.tag_configure("success", foreground="#008000")  # Verde
+        self.results_text.tag_configure("error", foreground="#CC0000")    # Rojo
+        self.results_text.tag_configure("info", foreground="#0000FF")     # Azul
+        self.results_text.tag_configure("result", foreground="#333333", 
+                                       font=('Arial', 10, 'bold')) # Negro negrita
+        self.results_text.tag_configure("action", foreground="#800080", 
+                                       font=('Arial', 11, 'bold')) # Morado negrita
+
+        # --- Instanciar el Árbol ---
+        self.arbol = ArbolBinarioBusqueda(self)
+        
+        # --- Poblar el Panel de Control ---
+        self.crear_controles()
+
+        # --- Dibujo Inicial y Mensaje de Bienvenida ---
+        self.actualizar_canvas()
+        self.mostrar_resultado("Sistema", "¡Bienvenido! Inserta un nodo o carga el ejemplo.", "info")
+        
+        # --- Cargar datos de ejemplo ---
+        self.cargar_ejemplo(silencioso=True) # Carga silenciosa al inicio
+
+    def crear_controles(self):
+        """Crea todos los botones y campos de entrada."""
+        
+        # --- Frame de Operaciones ---
+        op_frame = ttk.LabelFrame(self.control_frame, text="Operaciones")
+        op_frame.pack(fill=tk.X, pady=5, padx=10)
+        
+        f_entry = ttk.Frame(op_frame)
+        f_entry.pack(fill=tk.X)
+        ttk.Label(f_entry, text="Valor:").pack(side=tk.LEFT, padx=5)
+        self.entry_dato = ttk.Entry(f_entry, width=10)
+        self.entry_dato.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+        btn_insertar = ttk.Button(f_entry, text="Insertar ", command=self.insertar_callback)
+        btn_insertar.pack(side=tk.LEFT, padx=5)
+        self.entry_dato.bind('<Return>', self.insertar_callback)
+
+        f_op2 = ttk.Frame(op_frame)
+        f_op2.pack(fill=tk.X, pady=5)
+        btn_buscar = ttk.Button(f_op2, text="Buscar ", command=self.buscar_callback)
+        btn_buscar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        btn_del_pre = ttk.Button(f_op2, text="Eliminar (Pre) ", command=self.eliminar_predecesor_callback)
+        btn_del_pre.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        btn_del_suc = ttk.Button(f_op2, text="Eliminar (Suc) ", command=self.eliminar_sucesor_callback)
+        btn_del_suc.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+
+        # --- Frame de Recorridos ---
+        rec_frame = ttk.LabelFrame(self.control_frame, text="Recorridos")
+        rec_frame.pack(fill=tk.X, pady=5, padx=10)
+        btn_pre = ttk.Button(rec_frame, text="PreOrden ", command=self.arbol.get_preorden)
+        btn_pre.pack(fill=tk.X, pady=2)
+        btn_in = ttk.Button(rec_frame, text="InOrden ", command=self.arbol.get_inorden)
+        btn_in.pack(fill=tk.X, pady=2)
+        btn_post = ttk.Button(rec_frame, text="PostOrden ", command=self.arbol.get_postorden)
+        btn_post.pack(fill=tk.X, pady=2)
+        btn_niv = ttk.Button(rec_frame, text="Por Niveles ", command=self.arbol.get_por_niveles)
+        btn_niv.pack(fill=tk.X, pady=2)
+
+        # --- Frame de Propiedades ---
+        prop_frame = ttk.LabelFrame(self.control_frame, text="Propiedades")
+        prop_frame.pack(fill=tk.X, pady=5, padx=10)
+        btn_alt = ttk.Button(prop_frame, text="Altura ", command=self.arbol.get_altura)
+        btn_alt.pack(fill=tk.X, pady=2)
+        btn_hojas = ttk.Button(prop_frame, text="Cant. Hojas ", command=self.arbol.get_cantidad_hojas)
+        btn_hojas.pack(fill=tk.X, pady=2)
+        btn_nodos = ttk.Button(prop_frame, text="Cant. Nodos ", command=self.arbol.get_cantidad_nodos)
+        btn_nodos.pack(fill=tk.X, pady=2)
+        btn_comp = ttk.Button(prop_frame, text="¿Es Completo? ", command=self.arbol.get_es_completo)
+        btn_comp.pack(fill=tk.X, pady=2)
+        btn_lleno = ttk.Button(prop_frame, text="¿Es Lleno? ", command=self.arbol.get_es_lleno)
+        btn_lleno.pack(fill=tk.X, pady=2)
+
+        # --- Frame de Acciones ---
+        act_frame = ttk.LabelFrame(self.control_frame, text="Acciones")
+        act_frame.pack(fill=tk.X, pady=5, padx=10)
+        btn_del_all = ttk.Button(act_frame, text="Eliminar Árbol ", command=self.eliminar_arbol_callback)
+        btn_del_all.pack(fill=tk.X, pady=2)
+        btn_ejemplo = ttk.Button(act_frame, text="Cargar Ejemplo", command=self.cargar_ejemplo)
+        btn_ejemplo.pack(fill=tk.X, pady=2)
+        btn_limpiar = ttk.Button(act_frame, text="Limpiar Log", command=self.limpiar_resultados)
+        btn_limpiar.pack(fill=tk.X, pady=2)
+
+    # --- Funciones de Callback (intermediarios) ---
+    
+    def insertar_callback(self, event=None):
+        dato = self.entry_dato.get()
+        self.arbol.insertar(dato)
+        self.entry_dato.delete(0, tk.END)
+        self.entry_dato.focus_set()
+
+    def buscar_callback(self):
+        dato = self.entry_dato.get()
+        self.arbol.buscar(dato)
+    
+    def eliminar_predecesor_callback(self):
+        dato = self.entry_dato.get()
+        self.arbol.eliminar_nodo(dato, tipo='predecesor')
+        self.entry_dato.delete(0, tk.END)
+        self.entry_dato.focus_set()
+    
+    def eliminar_sucesor_callback(self):
+        dato = self.entry_dato.get()
+        self.arbol.eliminar_nodo(dato, tipo='sucesor')
+        self.entry_dato.delete(0, tk.END)
+        self.entry_dato.focus_set()
+
+    def eliminar_arbol_callback(self):
+        if messagebox.askyesno("Confirmar", "¿Está seguro de que desea eliminar el árbol completo?"):
+            self.arbol.eliminar_arbol_completo()
+            self.entry_dato.focus_set()
+
+    def cargar_ejemplo(self, silencioso=False):
+        if not self.arbol.esVacio() and not silencioso:
+            if not messagebox.askyesno("Confirmar", "¿Eliminar árbol actual y cargar ejemplo?"):
+                return
+                
+        self.arbol.eliminar_arbol_completo(silencioso=True)
+        datos_ejemplo = [50, 30, 70, 20, 40, 60, 80, 25, 35, 45, 75]
+        for dato in datos_ejemplo:
+            self.arbol.raiz = self.arbol._insertar_recursivo(self.arbol.raiz, dato)
+            
+        if not silencioso:
+            self.mostrar_resultado("Cargar Ejemplo", "Datos de ejemplo cargados.", "success")
+        self.actualizar_canvas()
+        self.entry_dato.focus_set()
+
+    def limpiar_resultados(self):
+        self.results_text.config(state=tk.NORMAL)
+        self.results_text.delete(1.0, tk.END)
+        self.results_text.config(state=tk.DISABLED)
+        self.mostrar_resultado("Sistema", "Log limpiado.", "info")
+
+    def mostrar_resultado(self, titulo_metodo, mensaje, tipo_mensaje):
+        """
+        Añade un mensaje al cuadro de log con colores.
+        titulo_metodo: El nombre del método (ej: "Insertar [1]")
+        mensaje: El resultado (ej: "Elemento 50 insertado")
+        tipo_mensaje: "success", "error", "info", "result"
+        """
+        try:
+            self.results_text.config(state=tk.NORMAL)
+            # Inserta el título con la etiqueta 'action' (morado)
+            self.results_text.insert(tk.END, f"-> {titulo_metodo}\n", "action")
+            # Inserta el mensaje con la etiqueta correspondiente
+            self.results_text.insert(tk.END, f"   {mensaje}\n\n", tipo_mensaje)
+            # Auto-scroll hacia el final
+            self.results_text.see(tk.END)
+            self.results_text.config(state=tk.DISABLED)
+        except tk.TclError:
+            # Pasa si la ventana ya se cerró
+            pass
+
+    # --- Funciones de Dibujo ---
+
+    def actualizar_canvas(self):
+        """Borra y redibuja todo el árbol en el canvas."""
+        self.canvas.delete("all")
+
+        if self.arbol.esVacio():
+            w = self.canvas_frame.winfo_width()
+            h = self.canvas_frame.winfo_height()
+            self.canvas.config(scrollregion=(0, 0, max(w, 800), max(h, 600)))
+            self.canvas.create_text(max(w, 800)/2, max(h, 600)/2, text="Árbol Vacío", 
+                                    font=("Arial", 20, "italic"), fill="gray")
+            return
+
+        altura = self.arbol._altura_recursiva(self.arbol.raiz)
+        ancho_canvas = (2**(altura + 1)) * (self.nodo_radio + 4) + self.padding
+        alto_canvas = (altura + 1) * self.espacio_v + self.padding * 2
+        
+        ancho_canvas = max(ancho_canvas, self.canvas_frame.winfo_width())
+        alto_canvas = max(alto_canvas, self.canvas_frame.winfo_height())
+
+        self.canvas.config(width=ancho_canvas, height=alto_canvas, 
+                           scrollregion=(0, 0, ancho_canvas, alto_canvas))
+
+        pos_x_inicial = ancho_canvas / 2
+        pos_y_inicial = self.padding + self.nodo_radio
+        h_gap_inicial = ancho_canvas / 4
+
+        self._dibujar_arbol_recursivo(self.arbol.raiz, pos_x_inicial, pos_y_inicial, h_gap_inicial)
+    
+    def _dibujar_arbol_recursivo(self, nodo, x, y, h_gap):
+        if nodo is None: return
+        r = self.nodo_radio
+        if nodo.izquierdo:
+            x_izq = x - h_gap
+            y_izq = y + self.espacio_v
+            self.canvas.create_line(x, y, x_izq, y_izq, fill="gray", width=2, tags="linea")
+            self._dibujar_arbol_recursivo(nodo.izquierdo, x_izq, y_izq, h_gap / 2)
+        if nodo.derecho:
+            x_der = x + h_gap
+            y_der = y + self.espacio_v
+            self.canvas.create_line(x, y, x_der, y_der, fill="gray", width=2, tags="linea")
+            self._dibujar_arbol_recursivo(nodo.derecho, x_der, y_der, h_gap / 2)
+
+        self.canvas.create_oval(x - r, y - r, x + r, y + r, fill="lightblue", outline="black", width=2, tags="nodo")
+        self.canvas.create_text(x, y, text=str(nodo.dato), fill="black", font=("Arial", 10, "bold"), tags="texto")
+        self.canvas.tag_raise("nodo")
+        self.canvas.tag_raise("texto")
+
+
+# --- Función Principal ---
+
+def main():
+    try:
+        root = tk.Tk()
+        app = AppBST(root)
+        root.mainloop()
+    except Exception as e:
+        messagebox.showerror("Error Fatal", f"Ocurrió un error inesperado: {e}")
+
+if __name__ == "__main__":
+    main()
